@@ -1,0 +1,122 @@
+version: '3.8'
+
+networks:
+  nas:
+    driver: bridge
+
+services:
+  qbittorrentvpn:
+    image: binhex/arch-qbittorrentvpn
+    container_name: qbittorrentvpn
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /root/docker/data:/data
+      - /root/docker/config:/config
+      - /etc/localtime:/etc/localtime:ro
+      - ${DEFAULT_DOWNLOAD_MEDIA_ABSOLUTE_PATH}:/media
+    environment:
+      - VPN_ENABLED=yes
+      - VPN_USER=${PIA_VPN_USERNAME}
+      - VPN_PASS=${PIA_VPN_PASSWORD}
+      - VPN_PROV=pia
+      - VPN_CLIENT=wireguard
+      - STRICT_PORT_FORWARD=yes
+      - ENABLE_PRIVOXY=yes
+      - VPN_OUTPUT_PORTS=8080
+      - LAN_NETWORK=192.168.18.0/24,172.17.0.0/16,172.18.0.0/16,172.19.0.0/16
+      - NAME_SERVERS=84.200.69.80,37.235.1.174,1.1.1.1,37.235.1.177,84.200.70.40,1.0.0.1
+      - DEBUG=true
+      - WEBUI_PORT=8080
+      - UMASK=000
+      - PUID=0
+      - PGID=0
+    ports:
+      - 6881:6881
+      - 6881:6881/udp
+      - 8080:8080
+      - 8118:8118
+    networks:
+      - nas
+
+  prowlarr:
+    image: binhex/arch-prowlarr
+    container_name: prowlarr
+    restart: unless-stopped
+    volumes:
+      - /apps/docker/prowlarr:/config
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - UMASK=000
+      - PUID=0
+      - PGID=0
+    ports:
+      - 9696:9696
+    networks:
+      - nas
+    depends_on:
+      - qbittorrentvpn
+
+  sonarr:
+    image: binhex/arch-sonarr
+    container_name: sonarr
+    restart: unless-stopped
+    volumes:
+      - ${TVSHOWS_DIRECTORY_ABSOLUTE_PATH}:/media
+      - /apps/docker/sabnzbd/watched:/data
+      - /apps/docker/sonarr:/config
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - UMASK=000
+      - PUID=0
+      - PGID=0
+    ports:
+      - 8989:8989
+      - 9897:9897
+    networks:
+      - nas
+    depends_on:
+      - qbittorrentvpn
+      - prowlarr
+
+  radarr:
+    image: binhex/arch-radarr
+    container_name: radarr
+    restart: unless-stopped
+    volumes:
+      - ${MOVIES_DIRECTORY_ABSOLUTE_PATH}:/media
+      - /apps/docker/sabnzbd/watched:/data
+      - /apps/docker/radarr:/config
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - UMASK=000
+      - PUID=0
+      - PGID=0
+    ports:
+      - 7878:7878
+    networks:
+      - nas
+    depends_on:
+      - qbittorrentvpn
+      - prowlarr
+
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=Asia/Singapore
+      - JELLYFIN_PublishedServerUrl=192.168.18.33
+    volumes:
+      - /apps/docker/jellyfin:/config
+      - ${TVSHOWS_DIRECTORY_ABSOLUTE_PATH}:/data/tvshows
+      - ${MOVIES_DIRECTORY_ABSOLUTE_PATH}:/data/movies
+    ports:
+      - 8096:8096
+      - 8920:8920
+      - 7359:7359/udp
+      - 1900:1900/udp
+    restart: unless-stopped
+    networks:
+      - nas
