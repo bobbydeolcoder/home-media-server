@@ -1,6 +1,8 @@
 # Home Media Server
 Convert any linux machine into a home media server!
 
+Jellyfin / qBittorrent / Sonarr / Radarr / Prowlarr
+
 _Disclaimer: I'm not encouraging/supporting piracy, this is for information purpose only._
 
 This repository contains the docker-compose file which can be used to launch docker containers to download movies or tv shows & play them using Jellyfin. The scripts have been tested & run on Ubuntu 22.04 LTS.
